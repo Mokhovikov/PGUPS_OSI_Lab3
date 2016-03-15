@@ -1,32 +1,61 @@
 #include "windows.h"
-#include "iostream"
+#include <string>
+#include <iostream>
 
 using namespace std;
 
-void main()
-{
+void main() {
 	HANDLE defaultHeapId;
-	LPVOID heapAllocated;
+	char *heapAllocated;
 	SIZE_T lastSize = 0;
 	bool isOverfilled = false;
+	//int *intToFill;
 	defaultHeapId = GetProcessHeap();
-	heapAllocated = (char*)HeapAlloc(defaultHeapId, HEAP_ZERO_MEMORY, 4096);
-	heapAllocated = (char*)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, heapAllocated, 288000000 * sizeof(heapAllocated));
-	cout << HeapSize(defaultHeapId, HEAP_NO_SERIALIZE, heapAllocated)*pow(10, -9);
 	int iter = 0;
 
 	while (!isOverfilled) {
-		/*if (lastSize == 65050)
-		lastSize = 65050;
-		heapAllocated = HeapAlloc(defaultHeapId, HEAP_GENERATE_EXCEPTIONS, ++lastSize);*/
 		__try {
-			heapAllocated = (char*)HeapReAlloc(defaultHeapId, HEAP_ZERO_MEMORY | HEAP_GENERATE_EXCEPTIONS, heapAllocated, sizeof(heapAllocated) + (iter * iter * iter * 128));
-			lastSize = HeapSize(defaultHeapId, HEAP_NO_SERIALIZE, heapAllocated);
+			heapAllocated = (char*)HeapAlloc(
+				defaultHeapId,
+				HEAP_GENERATE_EXCEPTIONS,
+				lastSize
+			);
+			/*intToFill = new int[lastSize];
+			for (int i = 0; i < lastSize; i++) {
+				intToFill[i] = i;
+			}
+			memcpy_s(heapAllocated, lastSize, intToFill, lastSize);*/
+			SIZE_T size = HeapSize(defaultHeapId, 0, heapAllocated);
+			system("cls");
+			cout << "-- STANDART HEAP --" << endl;
+			cout << "SIZE: " << size / pow(1024, 2) << " Mb" << endl;
+			HeapFree(defaultHeapId, 0, heapAllocated);
+			lastSize += 1024*1024*64;
 		}
 		__except (EXCEPTION_EXECUTE_HANDLER) {
 			isOverfilled = true;
 		}
 		iter++;
 	}
-	cout << "Max Size: " << lastSize << endl;
+	cout << "Max Size: " << lastSize / pow(1024, 2) << " Mb" << endl << "Iters: " << iter << endl;
+	system("pause");
+	isOverfilled = false;
+	DWORD heapSize = 0x100000;
+	while (!isOverfilled) {
+		__try {
+			heapSize += 0x100000;
+			HANDLE dynamicHeap = HeapCreate(HEAP_GENERATE_EXCEPTIONS, heapSize, 0);
+			if (dynamicHeap != NULL) {
+				system("cls");
+				cout << "-- DYNAMIC HEAP --" << endl;
+				cout << "SIZE: " << heapSize / pow(1024, 2) << " Mb" << endl;
+				HeapDestroy(dynamicHeap);
+			}
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER) {
+			isOverfilled = true;
+		}
+	}
+	cout << "Max Size: " << heapSize / pow(1024, 2) << " Mb" << endl;
+	system("pause");
 }
